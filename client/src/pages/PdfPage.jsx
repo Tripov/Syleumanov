@@ -1,66 +1,142 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api.js';
-import { Worker, Viewer } from '@react-pdf-viewer/core';
+
+// Ядро и плагины
+import { Worker, Viewer, SpecialZoomLevel } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 
+// Стили
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
-export default function PdfPage() {
-  const { id } = useParams();
-  const [data, setData] = useState(null);
+// Иконки
+import { ChevronLeft } from 'lucide-react';
 
-  const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    sidebarTabs: (defaultTabs) => [], // Скрываем навигацию внутри PDF
-    renderToolbar: (Toolbar) => (
-      <Toolbar>
-        {(slots) => {
-          const { Zoom, ZoomIn, ZoomOut, EnterFullScreen, NumberOfPages, CurrentPageInput } = slots;
-          return (
-            <div className="flex items-center w-full justify-between px-6 py-2 bg-[#0f172a] text-white border-b border-white/10 select-none">
-              <div className="flex items-center gap-4">
-                <ZoomOut /> <Zoom /> <ZoomIn />
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-60">
-                PAGES: <CurrentPageInput /> / <NumberOfPages />
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest hidden md:block">SECURE PDF VIEW</span>
-                <EnterFullScreen />
-              </div>
-            </div>
-          );
-        }}
-      </Toolbar>
-    ),
-  });
+import * as pdfjs from 'pdfjs-dist';
+const pdfjsVersion = pdfjs.version;
+
+export default function PdfPage({ setBreadcrumbs }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  
+  // Состояние для адаптации
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   useEffect(() => {
-    api.get(`/articles/${id}`).then(res => setData(res.data));
-  }, [id]);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  if (!data) return <div className="p-20 text-center opacity-20 uppercase font-black tracking-widest">LOADING SECURE DOCUMENT...</div>;
+  // Настройка плагина
+  const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    sidebarTabs: (defaultTabs) => [defaultTabs[0]], // Только миниатюры
+  });
+
+  // Авто-открытие миниатюр только для ПК
+  const handleDocumentLoad = () => {
+    if (!isMobile) {
+      defaultLayoutPluginInstance.activateTab(0);
+    }
+  };
+
+  useEffect(() => {
+    setData(null);
+    api.get(`/articles/${id}`).then(res => {
+      setData(res.data);
+      // На ПК показываем хлебные крошки, на мобилке скрываем для места
+      if (setBreadcrumbs) setBreadcrumbs(isMobile ? [] : res.data.breadcrumbPath || []);
+    });
+    return () => { if (setBreadcrumbs) setBreadcrumbs([]); };
+  }, [id, isMobile, setBreadcrumbs]);
+
+  if (!data) return (
+    <div className="fixed inset-0 top-14 left-0 z-50 bg-[#323639] flex items-center justify-center">
+       <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col animate-fade-in lg:px-4">
-      <div className="mb-6 flex justify-between items-end">
-         <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter shrink-0">{data.title}</h1>
-         <div className="flex gap-2">
-            <span className="bg-red-50 text-red-500 text-[10px] font-black px-4 py-1.5 rounded-full border border-red-100 uppercase tracking-widest">PROTECTED PDF</span>
-         </div>
+    /* 
+       ЛОГИКА КОНТЕЙНЕРА:
+       - На мобилке: фиксированный на весь экран (fixed inset-0 z-[100])
+       - На ПК: фиксированный под шапкой (fixed top-14 left-0 right-0 bottom-0 z-40)
+    */
+    <div className={`
+      fixed left-0 right-0 bottom-0 flex flex-col bg-[#323639] overflow-hidden animate-fade-in
+      ${isMobile ? 'top-0 z-[100]' : 'top-14 z-40'}
+    `}>
+      
+      {/* КНОПКА НАЗАД (Только для мобилок, так как там скрыт хедер сайта) */}
+      {isMobile && (
+        <button 
+          onClick={() => navigate(-1)}
+          className="fixed top-4 left-4 z-[110] p-3 bg-black/50 backdrop-blur-md text-white rounded-full shadow-2xl active:scale-95"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
+      {/* ОСНОВНОЙ ВЬЮВЕР */}
+      <div className="flex-1 overflow-hidden relative" onContextMenu={e => e.preventDefault()}>
+        <Worker workerUrl={`https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`}>
+          <Viewer 
+            fileUrl={data.fileUrl} 
+            plugins={[defaultLayoutPluginInstance]} 
+            theme="dark"
+            defaultScale={isMobile ? SpecialZoomLevel.PageWidth : 1.7}
+            onDocumentLoad={handleDocumentLoad}
+          />
+        </Worker>
       </div>
 
-      <div 
-        className="flex-1 bg-slate-900 rounded-[3rem] overflow-hidden border-8 border-[#0f172a] shadow-2xl relative"
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-          <Viewer fileUrl={data.fileUrl} plugins={[defaultLayoutPluginInstance]} theme="dark" />
-        </Worker>
-        
-        <div className="absolute inset-x-0 bottom-0 h-4 bg-[#0f172a] z-10 pointer-events-none"></div>
-      </div>
+      {/* НИЖНИЙ БАР (Скрываем на мобилках для экономии места) */}
+      {!isMobile && (
+        <div className="h-7 bg-[#202124] border-t border-black/40 flex items-center px-6 shrink-0 z-[70]">
+           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] truncate">
+              {data.title}
+           </span>
+           <span className="ml-auto text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">Архив v2.2</span>
+        </div>
+      )}
+
+      <style>{`
+        /* Скрываем мусорные кнопки */
+        [aria-label="Search"], [aria-label="Download"], [aria-label="Print"],
+        [data-testid="toolbar__search-button"], 
+        [data-testid="toolbar__download-button"], 
+        [data-testid="toolbar__print-button"] {
+            display: none !important;
+        }
+
+        /* Темы интерфейса */
+        .rpv-default-layout__toolbar {
+            background-color: #323639 !important;
+            border-bottom: 1px solid rgba(0,0,0,0.3) !important;
+        }
+
+        .rpv-core__viewer {
+            background-color: #525659 !important;
+        }
+
+        /* Настройка сайдбара на ПК */
+        @media (min-width: 1024px) {
+            .rpv-default-layout__sidebar {
+                width: 300px !important;
+                border-right: 1px solid rgba(0,0,0,0.5) !important;
+                background-color: #323639 !important;
+            }
+        }
+
+        /* На телефоне выключаем сайдбар совсем */
+        @media (max-width: 1023px) {
+            .rpv-default-layout__sidebar {
+                display: none !important;
+            }
+        }
+      `}</style>
     </div>
   );
 }

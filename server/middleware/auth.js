@@ -1,15 +1,27 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'your_super_secret_key';
+require('dotenv').config();
 
 module.exports = (req, res, next) => {
-  const token = req.headers['authorization'];
-  if (!token) return res.status(403).json({ error: "Нет доступа" });
+  const authHeader = req.headers['authorization'];
+  
+  if (!authHeader) {
+    return res.status(403).json({ error: "Токен отсутствует" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  
+  if (!token) {
+    return res.status(403).json({ error: "Формат токена неверный (нужен Bearer)" });
+  }
 
   try {
-    const decoded = jwt.verify(token.split(" ")[1], JWT_SECRET);
+    const secret = process.env.JWT_SECRET;
+    const decoded = jwt.verify(token, secret);
+    
     req.userId = decoded.id;
     next();
   } catch (err) {
-    res.status(401).json({ error: "Неверный токен" });
+    console.error("Ошибка JWT:", err.message);
+    res.status(401).json({ error: "Неверный или истекший токен" });
   }
 };

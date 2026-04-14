@@ -1,12 +1,10 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Базовые настройки страницы */
 body {
   @apply bg-slate-100 text-slate-900 antialiased font-sans;
 }
 
-/* 1. ЖИРНЫЕ ЗАГОЛОВКИ С ЛИНИЕЙ (v4 fix: !important вынесен из apply) */
 .prose h2 {
   @apply font-black text-slate-800 tracking-tighter text-2xl mt-12 mb-6;
   border-bottom: 3px solid #3b82f6 !important;
@@ -25,12 +23,10 @@ body {
   @apply antialiased;
 }
 
-/* Убираем лишние стили кнопок Copy в терминале */
 .group:hover .bg-white\/5 {
   @apply bg-white/10;
 }
 
-/* 2. ИНФО-БЛОКИ (Фикс для v4) */
 .info-block {
   @apply bg-[#ebf5ff] border-l-4 border-blue-500 p-6 my-8 rounded-r-2xl shadow-sm;
   display: block !important;
@@ -49,7 +45,6 @@ body {
 }
 .error-block, .error-block * { color: #991b1b !important; }
 
-/* ФИКС ОТСТУПОВ И ВЫДЕЛЕНИЙ ВНУТРИ БЛОКОВ */
 .info-block p, .success-block p, .error-block p {
   margin: 0 !important;
 }
@@ -60,7 +55,6 @@ body {
   border: none !important;
 }
 
-/* 3. НОВЫЙ БЛОК: ЦИТАТА / СПРАВОЧНО */
 .quote-block {
   @apply flex bg-white rounded-xl overflow-hidden my-8 shadow-sm border border-slate-200;
   display: flex !important;
@@ -74,7 +68,6 @@ body {
   display: flex !important;
 }
 
-/* 4. СТИЛИ ТАБЛИЦ */
 .prose table {
   @apply w-full border-collapse rounded-xl overflow-hidden my-8 shadow-sm;
   border: 1px solid #e2e8f0 !important;
@@ -92,7 +85,6 @@ body {
   border-bottom: 1px solid #f1f5f9 !important;
 }
 
-/* 5. НУМЕРАЦИЯ СТРОК КОДА (Фикс селектора и v4) */
 .react-syntax-highlighter-line-number {
   @apply pr-4 text-right select-none text-[11px] font-bold;
   color: #3b82f6 !important;
@@ -102,7 +94,6 @@ body {
   opacity: 1 !important;
 }
 
-/* 6. ФИКСЫ РЕДАКТОРА SimpleMDE */
 .editor-toolbar {
   @apply bg-slate-100 border-slate-200 rounded-t-2xl;
   border-bottom: none !important;
@@ -160,3 +151,66 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded; }
 .no-scrollbar::-webkit-scrollbar { display: none !important; }
+
+* {
+    overflow-wrap: break-word;
+}
+
+.prose {
+    max-width: 100% !important;
+}
+
+.prose table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.prose pre {
+    max-width: calc(100vw - 40px);
+    overflow-x: auto !important;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+@media (max-width: 768px) {
+    .prose h1 { font-size: 1.875rem !important; }
+    .prose h2 { font-size: 1.5rem !important; }
+    .prose p { font-size: 1rem !important; }
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Адаптивные отступы для основного контента */
+main {
+  @apply px-4 md:px-0;
+}
+
+/* Контент статьи: заголовки мельче на мобилках */
+@media (max-width: 640px) {
+  .prose h1 { font-size: 2rem !important; margin-bottom: 1.5rem !important; }
+  .prose h2 { font-size: 1.5rem !important; margin-top: 2rem !important; }
+  .prose p { font-size: 0.95rem !important; line-height: 1.6 !important; }
+  
+  /* Хлебные крошки: разрешаем горизонтальный скролл пальцем */
+  nav {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  nav::-webkit-scrollbar { display: none; }
+}
+
+/* Фикс мобильного вида контента, чтобы не упирался в края */
+.prose-mobile {
+  @apply px-0 md:px-4;
+}

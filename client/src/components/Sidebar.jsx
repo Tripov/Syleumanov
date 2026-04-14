@@ -10,11 +10,12 @@ const SidebarItem = ({ item, level = 0 }) => {
   const isFolder = item.type === 'folder';
   const paddingLeft = `${level * 16 + 16}px`;
 
-  const handleClick = () => {
+  const handleClick = (e) => {
+    e.stopPropagation();
     if (isFolder) {
       setIsOpen(!isOpen);
     } else {
-      // Умная навигация: если PDF - на одну страницу, если текст - на другую
+      // ПРОВЕРКА ТИПА ДЛЯ ПЕРЕХОДА
       const path = item.type === 'pdf' ? `/pdf/${item.id}` : `/article/${item.id}`;
       navigate(path);
     }
@@ -33,8 +34,11 @@ const SidebarItem = ({ item, level = 0 }) => {
             <Folder size={16} className={`mr-2 ${isOpen ? 'text-blue-400' : 'text-slate-500'}`} />
            </>
         ) : (
-          // Красная иконка для PDF, синяя для обычных статей
-          <FileText size={16} className={`ml-5 mr-2 ${item.type === 'pdf' ? 'text-red-500' : 'text-blue-400 opacity-80'}`} />
+          item.type === 'pdf' ? (
+            <FileDigit size={16} className="ml-5 mr-2 text-red-500" />
+          ) : (
+            <FileText size={16} className="ml-5 mr-2 text-blue-400 opacity-80" />
+          )
         )}
         <span className={isFolder ? "font-medium" : "font-light"}>{item.name}</span>
       </div>
@@ -61,7 +65,7 @@ export default function Sidebar() {
         setLoading(false);
       })
       .catch(err => {
-        console.error("Ошибка загрузки структуры:", err);
+        console.error("Ошибка структуры:", err);
         setLoading(false);
       });
   }, []);
@@ -89,7 +93,7 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 bg-[#020617] text-[10px] text-slate-600 border-t border-slate-800 flex justify-between uppercase font-black">
-         <span>Build: 2026.04.07</span>
+         <span>Build: 2026.04.13</span>
          <span className="text-blue-950">READY</span>
       </div>
     </div>
